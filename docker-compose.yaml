@@ -1,0 +1,136 @@
+# # Syntaxe pour ajouter un service:
+#     nom_service:
+#     # Règles de construction de l'image
+#     build:  # (Si vous utilisez une image utilisateur)
+#         # Chemin du répertoire du Dockerfile
+#         context: ./chemin/à/émuler/dans/le/Dockerfile/
+#         # Chemin du fichier Dockerfile
+#         dockerfile: ./chemin/du/fichier/Dockerfile
+#     # Configuration du fichier de variables d'environnement à définir dans le conteneur
+#     env_file:
+#            - "./chemin/vers/.env"
+#     image: nom_image_de_base (peut être une image utilisateur ou une image officielle)
+#     # Nom du conteneur qui sera utilisé
+#     container_name: nom_conteneur
+#     # Redémarrage automatique du conteneur en cas de plantage
+#     # restart: always
+#     # Définition du répertoire de travail à l'intérieur du conteneur
+#     working_dir: "/chemin/vers/le/dossier/de/travail/"
+#     # Port exposé à l'hôte basé sur le port d'écoute du conteneur (hôte:conteneur)
+#     # Ex: Si vous voulez accéder à votre site sur le port 8080
+#     # et que le conteneur est configuré pour écouter sur le port 80, 
+#     # vous devez exposer le port 8080 de l'hôte vers le port 80 du conteneur
+#     # -> 8080:80
+#     # Vous pourrez ensuite y accéder à http://localhost:8080
+#     ports:
+#         - "8080:80"
+#     # Définition des volumes à synchroniser entre l'hôte et le conteneur
+#     # "chemin_hôte:chemin_conteneur"
+#     # Vous pouvez ajouter :ro pour indiquer que le volume dans le conteneur est en lecture seule sur l'hôte
+#     # et :rw pour indiquer que le volume est en lecture/écriture
+#     volumes:
+#         # Exemple de volume de fichiers web statiques (le conteneur lit et écrit dans le fichier de l'hôte)
+#         - "./www/:/var/www/html/:rw"
+#         # Exemple de volume de fichiers de configuration (lecture seule)
+#         - "./chemin/hote/fichier.conf:/chemin/conteneur/fichier.conf:ro"
+#         # Exemple de volume de logs (lecture/écriture)
+#         - "./web/nginx/logs/:/var/log/nginx:rw"
+#         # Autre syntaxe possible pour les volumes:
+#         # - type: bind
+#         #   source: "./www/" # Chemin de l'hôte
+#         #   target: "/var/www/html/" # Chemin du conteneur
+#         #   consistency: consistent # Peut être "consistent", "delegated" ou "cached"
+#     # Définition des autres services liés à celui-ci
+#     links:
+#         - nom_service2
+#     depends_on:
+#         - nom_service2
+#     # Définition du réseau à utiliser (pour communiquer avec d'autres conteneurs sur le même réseau)
+#     networks:
+#         - mydocker-network
+
+version: '3.9'
+services:
+    # Liste des services utilisés pour cette composition Docker
+    #Service Web
+    web:
+        build:
+            context: ./
+            dockerfile: ./web/nginx/web.dockerfile
+        image: mydocker-web
+        container_name: mydocker-web
+        # restart: always
+        volumes:
+            # Config nginx
+            - type: bind
+              source: "./web/nginx/conf/custom/"
+              target: "/etc/nginx/custom/"
+              consistency: cached
+            # Fichiers web statiques
+            - type: bind
+              source: "./www/"
+              target: "/var/www/html/"
+              consistency: cached
+            # Logs nginx
+            - type: bind
+              source: "./web/nginx/logs/"
+              target: "/var/log/nginx/"
+              consistency: delegated
+        ports:
+            - "80:80"
+        links:
+            - php
+        depends_on:
+            - php
+        networks:
+            - mydocker-network
+        command: [ "nginx", "-g", "daemon off;" ]
+
+    #Service PHP
+    php:
+        env_file:
+            - "./web/web.env"
+        build:
+            context: ./
+            dockerfile: ./web/php/php.dockerfile
+        image: mydocker-php
+        container_name: mydocker-php
+        # restart: always
+        volumes:
+            # Fichiers web statiques
+            - type: bind
+              source: "./www/"
+              target: "/var/www/html/"
+              consistency: cached
+            # Logs PHP
+            - "./web/php/logs/php_errors.log:/usr/local/etc/php/php_errors.log:rw"
+        ports:
+            - "9000:80"
+        networks:
+            - mydocker-network
+    # Service base de données
+    db:
+        env_file:
+            - ./db/maria.env
+        image: mariadb:latest
+        container_name: mydocker-db
+        # restart: always
+        ports:
+            - "3306:3306"
+        volumes:
+            # Données de la base de données
+            - type: bind
+              source: "./db/data/"
+              target: "/var/lib/mysql/"
+              consistency: delegated
+        networks:
+            - mydocker-network
+        links:
+            - web
+            - php
+        depends_on:
+            - web
+            - php
+networks:
+    mydocker-network:
+        driver: bridge
