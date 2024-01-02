@@ -1,1 +1,9 @@
+# Ne pas envoyer les données de la base de données sur le dépôt
 /db/data/*
+
+# Ne pas envoyer les fichiers de logs sur le dépôt
+**/*.log
+
+# Conserver les fichiers git, même dans les sous-dossiers contenant des fichiers ignorés
+# (utile pour conserver les sous-dossiers vides dans le dépôt)
+!**/*/.git*
