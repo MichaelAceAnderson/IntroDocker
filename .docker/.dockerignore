@@ -1,0 +1,21 @@
+# Le fichier .dockerignore est utilisé pour ignorer les fichiers et dossiers
+# lors de la construction de l'image Docker.
+# Tous les fichiers ici ne seront pas copiés dans l'image Docker avec la commande COPY.
+# Sa syntaxe est identique à celle du fichier .gitignore.
+# Le dossier à partir duquel ce fichier ira chercher les fichiers à ignorer dépend de la configuration
+# de docker-compose.yml (voir le champ "context" de la configuration du service).
+
+# Ignorer les fichiers Docker
+.docker/**/Dockerfile
+.docker/**/.env*
+# Ignorer tous les fichiers et dossiers commençant par ".git"
+**/.git*
+# Ignorer tous les fichiers d'information markdown
+**/*.md
+# Ignorer le script de démarrage
+start.sh
+
+# Ignorer les dépendances et les fichiers de cache de Composer de l'hôte
+# (l'installation de Composer est effectuée dans le conteneur)
+**/var/
+**/vendor/

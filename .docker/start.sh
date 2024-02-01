@@ -1,14 +1,14 @@
 # Si ce n'est pas fait, démarrer le service docker
 
-# Tenter d'utiliser service
+# Tenter d'utiliser systemctl pour démarrer le service docker
 sudo systemctl start docker >/dev/null 2>/dev/null
 if [ $? -ne 0 ]; 
 then
     # Si systemctl ne fonctionne pas, utiliser service
     echo "Systemctl a échoué, utilisation de service pour démarrer Docker"
     sudo service docker start
-    # Si systemctl a fonctionné 
 else
+    # Si systemctl a fonctionné 
     echo "Systemctl a réussi à démarrer le service docker"
 fi
 

@@ -1,0 +1,182 @@
+#######################################################
+#                                                     #
+# Note: Tout ce qui est possible dans un Dockerfile   #
+# est également possible dans un docker-compose.yml,  #
+# mais il est recommandé de déléguer les tâches de    #
+# construction des images à un Dockerfile pour        #
+# render le docker-compose.yml plus lisible et        #
+# réutilisable.                                       #
+#                                                     #
+#######################################################
+
+
+# La version de docker-compose à utiliser
+# Cette version détermine la version de la syntaxe à utiliser pour lire le fichier
+version: "3.9"
+# Les services sont les conteneurs qui seront créés à partir de ce fichier
+services:
+  # Définition du service mariadb
+  mariadb:
+    # Définition du nom du conteneur
+    # Ce nom sera notamment utilisé pour identifier le conteneur dans les commandes docker
+    # Ex: docker stop mydocker-mariadb
+    container_name: "mydocker-mariadb"
+    
+    # Règles de construction de l'image
+    build:
+      # Le contexte est le chemin à partir duquel chercher le Dockerfile et l'exécuter
+      # Ici, on remonte d'un cran pour exécuter le Dockerfile à la racine du projet
+      # Le contexte aura une influence sur le chemin des fichiers à copier dans le conteneur via COPY
+      context: ../
+      dockerfile: ".docker/mariadb/Dockerfile"
+      
+    # Définition du répertoire de travail à l'intérieur du conteneur
+    # Équivalent du WORKDIR dans le Dockerfile, le working_dir permet de définir le répertoire de travail
+    # working_dir: "/chemin/vers/le/dossier/de/travail/"
+
+    # Configuration du fichier de variables d'environnement à définir dans le conteneur
+    # Ces variables peuvent être utilisées par votre application, mais aussi par le conteneur lui-même selon
+    # sa configuration
+    # Certaines images officielles requièrent des variables d'environnement pour configurer le conteneur
+    env_file:
+      - "mariadb/.env.dev"
+
+    # Cette option permet de redémarrer automatiquement le conteneur en cas de plantage
+    # Il est recommandé de l'utiliser en production
+    # restart: always
+
+    # Les volumes permettent de synchroniser des fichiers entre l'hôte et le conteneur ou entre plusieurs conteneurs
+    # afin de conserver les données même si le conteneur est supprimé, éteint, crashé, ...
+    volumes:
+      # Il existe plusieurs types de volumes:
+      # - bind: permet de synchroniser un dossier de l'hôte avec un dossier du conteneur
+      # - volume: permet de créer un volume Docker qui sera utilisable par d'autres conteneurs
+      # - tmpfs: permet de créer un volume temporaire en mémoire vive
+      # - named: permet de créer un volume Docker nommé qui sera utilisable par d'autres conteneurs
+      # - anonymous: permet de créer un volume Docker anonyme qui sera utilisable par d'autres conteneurs
+      # Ici, on utilise un volume de type bind pour synchroniser le dossier de données de MariaDB avec l'hôte
+      - type: bind
+        # Le dossier source est le dossier de l'hôte à synchroniser
+        source: "mariadb/data/"
+        # Le dossier cible est le dossier du conteneur à synchroniser
+        target: "/var/lib/mysql/"
+        # Il existe plusieurs types de consistance:
+        # - consistent: le conteneur et l'hôte sont synchronisés en temps réel
+        # - delegated: Le conteneur étant prioritaire sur l'hôte, ce sont ses modifications qui seront répercutées sur l'hôte
+        # après un délai (de manière asynchrone)
+        # - cached: L'hôte étant prioritaire sur le conteneur, ce sont ses modifications qui seront répercutées sur le conteneur
+        # après un délai (de manière asynchrone)
+        # La consistance cached est la plus performante, mais peut entraîner des pertes de données en cas de crash
+        # La consistance delegated est la plus sûre, mais peut entraîner des ralentissements
+        # La consistance consistent est moins performante que cached, mais plus performante que delegated
+        consistency: consistent
+      - type: bind
+        source: "mariadb/logs/"
+        target: "/var/log/mysql/"
+        consistency: consistent
+        # Exemple de volume de fichiers web statiques (le conteneur lit et écrit dans le fichier de l'hôte)
+        # - "./www/:/var/www/html/:rw"
+        # Exemple de volume de fichiers de configuration (lecture seule)
+        # - "./chemin/hote/fichier.conf:/chemin/conteneur/fichier.conf:ro"
+        # Exemple de volume de logs (lecture/écriture)
+        # - "./web/nginx/logs/:/var/log/nginx:rw"
+
+    # Les réseaux permettent de créer des réseaux virtuels entre les conteneurs
+    # pour déterminer lesquels peuvent communiquer entre eux
+    # Celui spécifié ici doit être configuré plus bas dans la section networks
+    networks:
+      - back-network
+    # Définition des ports à exposer à l'hôte
+    # On définit d'abord le port qui sera utilisé par l'hôte pour accéder au conteneur, puis le port qui sera utilisé dans le conteneur
+    # Format: "port_hote:port_conteneur" ou "port_conteneur" est l'équivalent du EXPOSE dans le Dockerfile
+    ports:
+      - 3306:3306
+  adminer:
+    container_name: "mydocker-adminer"
+    image: adminer
+    env_file:
+      - "adminer/.env.dev"
+    restart: always
+    networks:
+      - back-network
+    ports:
+      - 8080:8080
+    # Les dépendances, anciennement links, permettent de définir les conteneurs dont dépend celui-ci
+    # Si un conteneur dépend d'un autre, il ne pourra pas démarrer tant que le conteneur dont il dépend n'est pas démarré
+    depends_on:
+      - mariadb
+  php:
+    container_name: "mydocker-php"
+    build:
+      context: ../
+      dockerfile: ".docker/php/Dockerfile"
+    env_file:
+      - "adminer/.env.dev"
+      - "mariadb/.env.dev"
+    # Pour la prod
+    # restart: always
+    volumes:
+      # Fichiers web dynamiques
+      - type: bind
+        source: "../app/"
+        target: "/var/www/html/"
+        consistency: consistent
+      # Fichiers de configuration
+      - type: bind
+        source: "php/conf/php.ini"
+        target: "/usr/local/etc/php/php.ini"
+        consistency: consistent
+      # Fichiers de logs
+      - type: bind
+        source: "php/logs/"
+        target: "/var/log/php/"
+        consistency: consistent
+    depends_on:
+      - mariadb
+    networks:
+      - back-network
+    ports:
+    # Pour PHP-FPM
+      - "9000:9000"
+  nginx:
+    container_name: "mydocker-nginx"
+    build:
+      context: ../
+      dockerfile: ".docker/nginx/Dockerfile"
+    # Pour la prod
+    # restart: always
+    volumes:
+      # Fichiers web statiques
+      - type: bind
+        source: "../app/"
+        target: "/var/www/html/"
+        consistency: consistent
+      # Fichiers de configuration
+      - type: bind
+        source: "nginx/conf/nginx.conf"
+        target: "/etc/nginx/nginx.conf"
+        consistency: consistent
+      - type: bind
+        source: "nginx/conf/conf.d/"
+        target: "/etc/nginx/conf.d/"
+        consistency: consistent
+      # Fichiers de logs
+      - type: bind
+        source: "nginx/logs/"
+        target: "/var/log/nginx/"
+        consistency: consistent
+    depends_on:
+      - php
+    networks:
+      - back-network
+    ports:
+      - "8000:80"
+# Définition des réseaux
+# Il existe plusieurs types de réseaux:
+# - bridge: réseau privé entre les conteneurs (par défaut)
+# - host: réseau de l'hôte (conteneur sur le même réseau que l'hôte)
+# - none: pas de réseau (conteneur isolé)
+# - network: réseau Docker, créé préalablement avec la commande docker network create
+networks:
+  back-network:
+    driver: bridge

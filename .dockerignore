@@ -1,0 +1,17 @@
+# Ignorer les fichiers Docker
+.docker/**/Dockerfile
+.docker/**/.env*
+.docker/mariadb/data
+# Ignorer tous les fichiers et dossiers commençant par ".git"
+**/.git*
+# Ignorer tous les fichiers d'information markdown
+**/*.md
+# Ignorer le script de démarrage
+start.sh
+# Ignorer le fichier Makefile
+Makefile
+
+# Ignorer les dépendances et les fichiers de cache de Composer de l'hôte
+# (l'installation de Composer est effectuée dans le conteneur)
+**/var/
+**/vendor/

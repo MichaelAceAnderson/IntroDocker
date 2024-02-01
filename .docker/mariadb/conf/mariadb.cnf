@@ -1,0 +1,38 @@
+# Fichier de configuration de MariaDB
+#
+# Les outils MariaDB/MySQL lisent les fichiers de configuration dans l'ordre suivant :
+# 0. "/etc/mysql/my.cnf" est un lien symbolique vers ce fichier, c'est pourquoi tout le reste est lu.
+# 1. "/etc/mysql/mariadb.cnf" (ce fichier) pour définir les valeurs par défaut globales,
+# 2. "/etc/mysql/conf.d/*.cnf" pour définir les options globale.
+# 3. "/etc/mysql/mariadb.conf.d/*.cnf" pour définir les options spécifiques à MariaDB.
+# 4. "~/.my.cnf" pour définir les options spécifiques à l'utilisateur.
+#
+# Si la même option est définie plusieurs fois, seule la dernière sera appliquée.
+#
+# On peut utiliser toutes les options longues que le programme prend en charge.
+# Exécutez le programme avec --help pour obtenir une liste des options disponibles et avec
+# --print-defaults pour voir celles qu'il comprendrait et utiliserait réellement.
+#
+# Si vous êtes nouveau dans MariaDB, consultez https://mariadb.com/kb/en/basic-mariadb-articles/
+
+#
+# Ce groupe est lu à la fois par le client et le serveur
+# utilisez-le pour les options qui affectent tout
+#
+[client-server]
+# Port ou emplacement du socket pour se connecter au serveur MariaDB
+# Il s'agit du port qui devra être exposé dans le Dockerfile et docker-compose.yml
+port = 3306
+socket = /run/mysqld/mysqld.sock
+
+[mysqld]
+# Activer ou non le logging général
+general_log = 1
+# Emplacement du fichier de log général
+general_log_file = /var/log/mysql/mariadb.log
+# Emplacement du fichier de log d'erreur
+log_error = /var/log/mysql/mariadb-error.log
+
+# Importer tous les fichiers .cnf du répertoire de configuration
+!includedir /etc/mysql/mariadb.conf.d/
+!includedir /etc/mysql/conf.d/
