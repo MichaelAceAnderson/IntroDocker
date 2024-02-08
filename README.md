@@ -2,7 +2,7 @@
 
 IntroDocker est un projet de formation à Docker.
 
-Les étapes de créations d'un container sont explicitées dans IntroDocker.pdf tandis que tous les fichiers nécessaires à la création du container sont commentés de manière à comprendre chacune des étapes.
+Tandis que le parcours principal d'apprentissage est explicité ici, les fichiers nécessaires à la création d'un container ou d'une composition sont commentés de manière à comprendre chaque étape.
 
 > Aperçu
 ![IntroDocker](IntroDocker.jpg)
@@ -21,9 +21,10 @@ Les étapes de créations d'un container sont explicitées dans IntroDocker.pdf 
 			- [Arrêt d'un conteneur](#arrêt-dun-conteneur)
 			- [Suppression d'un conteneur](#suppression-dun-conteneur)
 		- [Docker Compose](#docker-compose)
-			- [Volumes](#volumes)
-				- [Types de volumes](#types-de-volumes)
-				- [Consistency](#consistency)
+			- [Configuration d'une composition](#configuration-dune-composition)
+				- [Volumes](#volumes)
+					- [Types de volumes](#types-de-volumes)
+					- [Consistency](#consistency)
 			- [Démarrage d'une composition Docker](#démarrage-dune-composition-docker)
 			- [Arrêt d'une composition Docker](#arrêt-dune-composition-docker)
 			- [Suppression d'une composition Docker](#suppression-dune-composition-docker)
@@ -205,6 +206,8 @@ docker rm mydocker-nginx
 Docker Compose est un outil qui permet de définir et d’exécuter des applications Docker multi-containers. Avec Compose, on utilise un fichier YAML pour configurer les services de l’application. Ensuite, avec une seule commande, on crée et démarre tous les services à partir de cette configuration.  
 Le script [start.sh](/.docker/start.sh) démarre une composition en reconstruisant ou non les conteneurs à partir de 0 selon le choix de l'utilisateur (peut s'avérer utile pour le développement).  
 
+#### Configuration d'une composition
+
 En règle générale, on cherche à séparer chaque service (Serveur web, BDD, ...) dans un conteneur distinct pour faciliter leur gestion. Pour articuler ces conteneurs et les relier les uns aux autres pour faire fonctionner une application, on utilise Docker Compose. C’est le fichier docker-compose.yml qui permet cette configuration. Chaque service doit être nommé et configuré dans ce fichier.  
 Dans cet exemple, après avoir donné la version de Docker Compose, on définit un premier service serveur web avec nginx. On peut choisir de partir directement d’une image du Docker Hub (comme avec `FROM`) ou d’utiliser un Dockerfile. Ici,
 pour la construction de l’image, on utilisera le Dockerfile dans le sous-dossier web/nginx/ :
@@ -213,11 +216,11 @@ pour la construction de l’image, on utilisera le Dockerfile dans le sous-dossi
 
 ⚠️ Note: Il est recommandé de déléguer un maximum de tâches au Dockerfile, et en particulier les tâches spécifiques à l'application pour rendre le docker-compose.yml réutilisable.
 
-#### Volumes
+##### Volumes
 
 Les volumes permettent de faire persister les données lorsque le conteneur s'éteint, afin de pouvoir les récupérer lors du prochain démarrage. Les volumes sont d'importance capitale pour les conteneurs en production, car ils permettent de conserver les données et de les partager entre plusieurs conteneurs, en particulier pour les bases de données.
 
-##### Types de volumes
+###### Types de volumes
 
 Il existe plusieurs types de volumes, qui définissent la manière dont les données sont stockées:
 
@@ -226,7 +229,7 @@ le moins performant puisqu'il utilise le système de fichiers de l'hôte mais pe
 - `volume`: monte un dossier ou un fichier depuis le conteneur vers un volume Docker. C’est le type de volume le plus performant, il permet d'assurer la persistance des fichiers à l'extinction du conteneur, recommandé pour la production.
 - `tmpfs`: monte un dossier ou un fichier depuis la mémoire vive de l’hôte vers le conteneur. C’est le type de volume le plus performant, mais les données ne sont pas persistantes, recommandé pour les logs.
 
-##### Consistency
+###### Consistency
 
 La directive « consistency » permet de définir le mode de synchronisation des données entre l’hôte et le conteneur. Il existe trois modes :
 
