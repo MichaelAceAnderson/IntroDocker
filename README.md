@@ -229,7 +229,43 @@ le moins performant puisqu'il utilise le système de fichiers de l'hôte mais pe
 - `volume`: monte un dossier ou un fichier depuis le conteneur vers un volume Docker. C’est le type de volume le plus performant, il permet d'assurer la persistance des fichiers à l'extinction du conteneur, recommandé pour la production.
 - `tmpfs`: monte un dossier ou un fichier depuis la mémoire vive de l’hôte vers le conteneur. C’est le type de volume le plus performant, mais les données ne sont pas persistantes, recommandé pour les logs.
 
-###### Consistency
+Ces volumes peuvent être nommés ou anonymes. Les volumes nommés sont créés avec la commande `docker volume create <nom du volume>` et sont réutilisables entre plusieurs conteneurs. Les volumes anonymes sont créés automatiquement par Docker et sont liés à un seul conteneur.
+Caractéristiques des volumes anonymes:
+
+- Ils ne nécessitent pas de gestion de nommage, pas de nettoyage
+- Ils sont liés à un seul conteneur, ce qui permet de les supprimer en même temps que le conteneur
+- Ils ne sont pas réutilisables
+- Ils sont plus adaptés au développement
+- Ils permettent de créer des volumes sur un seul fichier
+Caractéristiques des volumes nommés:
+
+- Ils nécessitent une gestion de nommage, un nettoyage (ex: `docker volume rm <nom du volume>`, `docker volume prune` pour supprimer tous les volumes non en cours d'utilisation, `docker compose down --volumes` pour supprimer les volumes associés à une composition Docker)
+- Ils sont réutilisables entre plusieurs conteneurs
+- Ils ne permettent pas de supprimer les données en même temps que le conteneur
+- Ils sont plus adaptés à la production
+- Ils ne permettent pas de créer des volumes sur un seul fichier
+
+Un exemple avec les deux types de volume dans un fichier docker-compose.yml:
+
+```yaml
+services:
+  myservice:
+    volumes:
+      # Exemple de volume nommé
+      - myvolume:/chemin/conteneur
+      # Exemple de volume anonyme
+      - /chemin/hote:/chemin/conteneur
+
+# Configuration du volume nommé
+volumes:
+  myvolume:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./chemin/hote
+      o: bind
+```
+
 
 La directive « consistency » permet de définir le mode de synchronisation des données entre l’hôte et le conteneur. Il existe trois modes :
 
