@@ -24,7 +24,6 @@ Tandis que le parcours principal d'apprentissage est explicité ici, les fichier
 			- [Configuration d'une composition](#configuration-dune-composition)
 				- [Volumes](#volumes)
 					- [Types de volumes](#types-de-volumes)
-					- [Consistency](#consistency)
 			- [Démarrage d'une composition Docker](#démarrage-dune-composition-docker)
 			- [Arrêt d'une composition Docker](#arrêt-dune-composition-docker)
 			- [Suppression d'une composition Docker](#suppression-dune-composition-docker)
@@ -266,8 +265,7 @@ volumes:
       o: bind
 ```
 
-
-La directive « consistency » permet de définir le mode de synchronisation des données entre l’hôte et le conteneur. Il existe trois modes :
+La directive « consistency » n'existe que sur les systèmes MacOS et permet de définir le mode de synchronisation des données entre l’hôte et le conteneur. Il existe trois modes :
 
 - `consistent`: synchronisation instantanée entre l’hôte et le conteneur, peut poser des problèmes de performances si le conteneur écrit beaucoup de données.
 - `cached`: les fichiers de l'hôte sont en mode lecture seule pour le conteneur et  les changements sont appliqués avec un délai. Ce mode est recommandé pour le code. Il est plus performant que « consistent » et permet d’éviter les problèmes de performances si le conteneur écrit beaucoup de données.
