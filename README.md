@@ -139,7 +139,9 @@ pourraient ne pas s’exécuter.
 Le mot clé « `CMD` » permet également d’exécuter une commande, mais ne fait pas partie des
 étapes de construction du conteneur. S’il y a plusieurs `CMD` dans un Dockerfile, seule la dernière sera
 exécutée. Il est recommandé d’utiliser RUN pour la construction & l’installation et `CMD` pour le
-démarrage.  
+démarrage. Cette commande a une syntaxe particulière, les arguments doivent être sous forme de tableau JSON (Ex : `CMD [ "npm", "run", "start" ]`) étant donné qu'il n'y a pas de shell intermédiaire pour interpréter les caractères spéciaux lors du démarrage du conteneur.  
+Le mot clé « `EXPOSE` » permet de déclarer les ports utilisés par le conteneur. S'il y a plusieurs ports, il faut les séparer par des espaces (Ex : `EXPOSE 3000 8080`).
+
 Un exemple de Dockerfile:
 
 ```dockerfile
