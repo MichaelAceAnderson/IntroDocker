@@ -1,0 +1,7 @@
+# Do not include the following files
+**/*.log*
+# MariaDB data
+.docker/mariadb/data/*
+
+# Keep directories containing a .gitkeep file but not necessarily their content
+!**/.gitkeep
