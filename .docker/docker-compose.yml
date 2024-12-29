@@ -1,0 +1,181 @@
+#######################################################
+#                                                     #
+# NOTE: Everything that is possible in a Dockerfile   #
+# is also possible in a docker-compose.yml,           #
+# but it is recommended to delegate image building    #
+# tasks to a Dockerfile to make the docker-compose.yml#
+# more flexible.                                      #
+#                                                     #
+#######################################################
+
+
+# The version of docker-compose to use
+# This version determines the syntax version to use for reading the file
+version: "3.9"
+# Services are the containers that will be created from this file
+services:
+  # Definition of the mariadb service
+  mariadb:
+    # Definition of the container name
+    # This name will be used to identify the container in docker commands
+    # Ex: docker stop introdocker-mariadb
+    container_name: "introdocker-mariadb"
+    
+    # Image build rules
+    build:
+      # The context is the path from which to look for the Dockerfile and execute it
+      # Here, we go up one level to execute the Dockerfile at the root of the project
+      # The context will influence the path of the files to copy into the container via COPY
+      context: ../
+      dockerfile: ".docker/mariadb/Dockerfile"
+      
+    # Definition of the working directory inside the container
+    # Equivalent to WORKDIR in the Dockerfile, working_dir allows you to define the working directory
+    # working_dir: "/path/to/working/directory/"
+
+    # Configuration of the environment variables file to define in the container
+    # These variables can be used by your application, but also by the container itself according to
+    # its configuration
+    # Some official images require environment variables to configure the container
+    env_file:
+      - "mariadb/.env.dev"
+
+    # This option allows the container to restart automatically in case of a crash
+    # It is recommended to use it in production
+    # restart: on-failure
+
+    # Volumes allow synchronizing files between the host and the container or between multiple containers
+    # to retain data even if the container is deleted, stopped, crashed, ...
+    volumes:
+      # There are several types of volumes:
+      # - bind: allows synchronizing a host folder with a container folder
+      # - volume: allows creating a Docker volume that will be usable by other containers
+      # - tmpfs: allows creating a temporary volume in RAM
+      # - named: allows creating a named Docker volume that will be usable by other containers
+      # - anonymous: allows creating an anonymous Docker volume that will be usable by other containers
+      # Here, we use a bind volume to synchronize the MariaDB data folder with the host
+      - type: bind
+        # The source folder is the host folder to synchronize
+        source: "mariadb/data/"
+        # The target folder is the container folder to synchronize
+        target: "/var/lib/mysql/"
+        # There are several types of consistency:
+        # - consistent: the container and the host are synchronized in real-time
+        # - delegated: The container being prioritized over the host, its changes will be reflected on the host
+        # after a delay (asynchronously)
+        # - cached: The host being prioritized over the container, its changes will be reflected on the container
+        # after a delay (asynchronously)
+        # The cached consistency is the most performant but can lead to data loss in case of a crash
+        # The delegated consistency is the safest but can lead to slowdowns
+        # The consistent consistency is less performant than cached but more performant than delegated
+        consistency: consistent
+      - type: bind
+        source: "mariadb/logs/"
+        target: "/var/log/mysql/"
+        consistency: consistent
+        # Example of static web files volume (the container reads and writes in the host file)
+        # - "./www/:/var/www/html/:rw"
+        # Example of configuration files volume (read-only)
+        # - "./host/path/file.conf:/container/path/file.conf:ro"
+        # Example of logs volume (read/write)
+        # - "./web/nginx/logs/:/var/log/nginx:rw"
+
+    # Networks allow creating virtual networks between containers
+    # to determine which ones can communicate with each other
+    # The one specified here must be configured below in the networks section
+    networks:
+      - back-network
+    # Definition of the ports to expose to the host
+    # We first define the port that will be used by the host to access the container, then the port that will be used in the container
+    # Format: "host_port:container_port" or "container_port" is equivalent to EXPOSE in the Dockerfile
+    ports:
+      - 3306:3306
+  adminer:
+    container_name: "introdocker-adminer"
+    image: adminer
+    env_file:
+      - "adminer/.env.dev"
+    restart: on-failure
+    networks:
+      - back-network
+    ports:
+      - 8080:8080
+    # Dependencies, formerly links, allow defining the containers this one depends on
+    # If a container depends on another, it will not be able to start until the container it depends on is started
+    depends_on:
+      - mariadb
+  php:
+    container_name: "introdocker-php"
+    build:
+      context: ../
+      dockerfile: ".docker/php/Dockerfile"
+    env_file:
+      - "adminer/.env.dev"
+      - "mariadb/.env.dev"
+    # For production
+    # restart: on-failure
+    volumes:
+      # Dynamic web files
+      - type: bind
+        source: "../app/"
+        target: "/var/www/html/"
+        consistency: consistent
+      # Configuration files
+      - type: bind
+        source: "php/conf/php.ini"
+        target: "/usr/local/etc/php/php.ini"
+        consistency: consistent
+      # Logs files
+      - type: bind
+        source: "php/logs/"
+        target: "/var/log/php/"
+        consistency: consistent
+    depends_on:
+      - mariadb
+    networks:
+      - back-network
+    ports:
+    # For PHP-FPM
+      - "9000:9000"
+  nginx:
+    container_name: "introdocker-nginx"
+    build:
+      context: ../
+      dockerfile: ".docker/nginx/Dockerfile"
+    # For production
+    # restart: on-failure
+    volumes:
+      # Static web files
+      - type: bind
+        source: "../app/"
+        target: "/var/www/html/"
+        consistency: consistent
+      # Configuration files
+      - type: bind
+        source: "nginx/conf/nginx.conf"
+        target: "/etc/nginx/nginx.conf"
+        consistency: consistent
+      - type: bind
+        source: "nginx/conf/conf.d/"
+        target: "/etc/nginx/conf.d/"
+        consistency: consistent
+      # Logs files
+      - type: bind
+        source: "nginx/logs/"
+        target: "/var/log/nginx/"
+        consistency: consistent
+    depends_on:
+      - php
+    networks:
+      - back-network
+    ports:
+      - "8000:80"
+# Definition of networks
+# There are several types of networks:
+# - bridge: private network between containers (default)
+# - host: host network (container on the same network as the host)
+# - none: no network (isolated container)
+# - network: Docker network, created beforehand with the docker network create command
+networks:
+  back-network:
+    driver: bridge
